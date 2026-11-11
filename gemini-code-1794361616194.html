@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CEFR-J チャット学習 - 管理者パネル</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.5.0/lz-string.min.js"></script>
+  <style>
+    * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+    body { background-color: #f4f6f8; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 20px; }
+    .card { background: #ffffff; padding: 30px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); width: 100%; max-width: 600px; text-align: center; }
+    .hidden { display: none !important; }
+    h2 { margin-top: 0; color: #333; margin-bottom: 20px; }
+    label { display: block; margin-bottom: 6px; color: #46178f; font-size: 14px; font-weight: bold; text-align: left; }
+    
+    select, textarea { width: 100%; padding: 12px; border: 2px solid #cccccc; border-radius: 8px; font-size: 14px; margin-bottom: 18px; outline: none; background: #fff; }
+    select:focus, textarea:focus { border-color: #46178f; }
+
+    .form-row { display: flex; gap: 15px; }
+    .form-col { flex: 1; text-align: left; }
+
+    button.primary { width: 100%; padding: 14px; background-color: #46178f; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; transition: background 0.2s ease; margin-bottom: 10px; }
+    button.primary:hover { background-color: #331068; }
+
+    button.secondary { width: 100%; background-color: #e0e0e0; color: #333; margin-top: 10px; font-weight: bold; padding: 12px; border: none; border-radius: 8px; font-size: 16px; cursor: pointer; }
+    button.secondary:hover { background-color: #d0d0d0; }
+
+    #qrcode { display: flex; justify-content: center; margin: 20px 0; }
+  </style>
+</head>
+<body>
+
+  <div class="card">
+    <!-- Setup Screen -->
+    <div id="setupScreen">
+      <h2>⚙️ Session & Persona Configuration</h2>
+      <p style="font-size: 13px; color: #666; text-align: left; margin-bottom: 20px;">
+        Configure the default CEFR-J proficiency tier, maximum conversation steps, and persona guidance for this session.
+      </p>
+
+      <div class="form-row">
+        <div class="form-col">
+          <label for="cefrLevel">Default CEFR-J Level:</label>
+          <select id="cefrLevel">
+            <option value="Pre-A1">Level 1: Pre-A1 (Introductory / Foundation)</option>
+            <option value="A1.1" selected>Level 2: A1.1 (High School 1st Yr Foundation)</option>
+            <option value="A1.2">Level 3: A1.2 (High School 1st Yr Standard)</option>
+            <option value="A1.3">Level 4: A1.3 (High School 1st/2nd Yr Solid A1)</option>
+            <option value="A2.1">Level 5: A2.1 (High School 2nd Yr / Eiken 3rd)</option>
+            <option value="A2.2">Level 6: A2.2 (High School 2nd/3rd Yr / Eiken Pre-2nd)</option>
+            <option value="B1.1">Level 7: B1.1 (High School 3rd Yr / Eiken 2nd)</option>
+            <option value="B1.2">Level 8: B1.2 (Advanced High School / Eiken Pre-1st)</option>
+          </select>
+        </div>
+
+        <div class="form-col">
+          <label for="totalSteps">Number of Questions:</label>
+          <select id="totalSteps">
+            <!-- Dynamically populated 1 to 20 -->
+          </select>
+        </div>
+      </div>
+
+      <label for="customNotes">Custom Persona / Topic (Optional):</label>
+      <textarea id="customNotes" style="height: 100px;" placeholder="e.g., Talk about weekend hobbies, festival plans, favorite sports..."></textarea>
+
+      <button id="generateQrBtn" class="primary">QRコードを生成 (Generate Session QR)</button>
+    </div>
+
+    <!-- QR Screen -->
+    <div id="qrScreen" class="hidden">
+      <h2>スキャンしてチャットを開始！</h2>
+      <div id="qrcode"></div>
+      <button id="backBtn" class="secondary">設定に戻る</button>
+    </div>
+  </div>
+
+  <script>
+    const totalStepsSelect = document.getElementById('totalSteps');
+    for (let i = 1; i <= 20; i++) {
+      const opt = document.createElement('option');
+      opt.value = i;
+      opt.textContent = `${i} Question${i > 1 ? 's' : ''}`;
+      if (i === 6) opt.selected = true;
+      totalStepsSelect.appendChild(opt);
+    }
+
+    document.getElementById('generateQrBtn').addEventListener('click', () => {
+      const customNotes = document.getElementById('customNotes').value.trim();
+      const cefrLevel = document.getElementById('cefrLevel').value;
+      const totalSteps = parseInt(document.getElementById('totalSteps').value, 10);
+
+      const payload = JSON.stringify({ 
+        customNotes: customNotes,
+        cefrLevel: cefrLevel,
+        totalSteps: totalSteps
+      });
+      
+      const compressedPayload = LZString.compressToEncodedURIComponent(payload);
+
+      let currentPath = window.location.pathname;
+      let studentPath = currentPath.substring(0, currentPath.lastIndexOf('/') + 1) + 'student.html';
+      const targetUrl = `${window.location.origin}${studentPath}?config=${compressedPayload}`;
+
+      document.getElementById('qrcode').innerHTML = '';
+      new QRCode(document.getElementById('qrcode'), { 
+        text: targetUrl, 
+        width: 280, 
+        height: 280,
+        correctLevel: QRCode.CorrectLevel.L
+      });
+
+      document.getElementById('setupScreen').classList.add('hidden');
+      document.getElementById('qrScreen').classList.remove('hidden');
+    });
+
+    document.getElementById('backBtn').addEventListener('click', () => {
+      document.getElementById('qrScreen').classList.add('hidden');
+      document.getElementById('setupScreen').classList.remove('hidden');
+    });
+  </script>
+</body>
+</html>
