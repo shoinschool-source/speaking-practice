@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CEFR-J チャット学習 - 管理者パネル</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.5.0/lz-string.min.js"></script>
+  <style>
+    * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+    body { background-color: #f4f6f8; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 20px; }
+    .card { background: #ffffff; padding: 30px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); width: 100%; max-width: 600px; text-align: center; }
+    .hidden { display: none !important; }
+    h2 { margin-top: 0; color: #333; margin-bottom: 20px; }
+    label { display: block; margin-bottom: 6px; color: #46178f; font-size: 14px; font-weight: bold; text-align: left; }
+    
+    select, textarea { width: 100%; padding: 12px; border: 2px solid #cccccc; border-radius: 8px; font-size: 14px; margin-bottom: 18px; outline: none; background: #fff; }
+    select:focus, textarea:focus { border-color: #46178f; }
+
+    button.primary { width: 100%; padding: 14px; background-color: #46178f; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; transition: background 0.2s ease; margin-bottom: 10px; }
+    button.primary:hover { background-color: #331068; }
+
+    button.test-btn { width: 100%; padding: 12px; background-color: #28a745; color: white; border: none; border-radius: 8px; font-size: 15px; font-weight: bold; cursor: pointer; transition: background 0.2s ease; margin-bottom: 10px; }
+    button.test-btn:hover { background-color: #218838; }
+
+    button.secondary { width: 100%; background-color: #e0e0e0; color: #333; margin-top: 10px; font-weight: bold; padding: 12px; border: none; border-radius: 8px; font-size: 16px; cursor: pointer; }
+    button.secondary:hover { background-color: #d0d0d0; }
+
+    #qrcode { display: flex; justify-content: center; margin: 20px 0; }
+  </style>
+</head>
+<body>
+
+  <div class="card">
+    <!-- Setup Screen -->
+    <div id="setupScreen">
+      <h2>⚙️ Session Configuration</h2>
+      <p style="font-size: 13px; color: #666; text-align: left; margin-bottom: 20px;">
+        Set the number of questions and optional teacher guidance. Students will select their own difficulty level when scanning or testing.
+      </p>
+
+      <label for="totalSteps">Number of Questions (1 – 20):</label>
+      <select id="totalSteps">
+        <!-- Dynamically populated 1 to 20 -->
+      </select>
+
+      <label for="customNotes">Custom Persona / Topic Instructions (Optional):</label>
+      <textarea id="customNotes" style="height: 120px;" placeholder="e.g., Talk about weekend hobbies, festival plans, favorite sports..."></textarea>
+
+      <button id="generateQrBtn" class="primary">QRコードを生成 (Generate Session QR)</button>
+      <button id="testLinkBtn" class="test-btn" onclick="openTestLink()">🧪 テスト用リンクを開く (Open Test Link)</button>
+    </div>
+
+    <!-- QR Screen -->
+    <div id="qrScreen" class="hidden">
+      <h2>スキャンしてチャットを開始！</h2>
+      <div id="qrcode"></div>
+      <button onclick="openTestLink()" style="background: #28a745; color: white; border: none; padding: 10px; border-radius: 6px; font-weight: bold; cursor: pointer; width: 100%; margin-bottom: 10px;">🧪 この設定でテストタブを開く</button>
+      <button id="backBtn" class="secondary">設定に戻る</button>
+    </div>
+  </div>
+
+  <script>
+    const totalStepsSelect = document.getElementById('totalSteps');
+    for (let i = 1; i <= 20; i++) {
+      const opt = document.createElement('option');
+      opt.value = i;
+      opt.textContent = `${i} Question${i > 1 ? 's' : ''}`;
+      if (i === 6) opt.selected = true;
+      totalStepsSelect.appendChild(opt);
+    }
+
+    function getTargetUrl() {
+      const customNotes = document.getElementById('customNotes').value.trim();
+      const totalSteps = parseInt(document.getElementById('totalSteps').value, 10);
+
+      const payload = JSON.stringify({ 
+        customNotes: customNotes,
+        totalSteps: totalSteps
+      });
+      
+      const compressedPayload = LZString.compressToEncodedURIComponent(payload);
+
+      let currentPath = window.location.pathname;
+      let studentPath = currentPath.substring(0, currentPath.lastIndexOf('/') + 1) + 'student.html';
+      return `${window.location.origin}${studentPath}?config=${compressedPayload}`;
+    }
+
+    document.getElementById('generateQrBtn').addEventListener('click', () => {
+      const targetUrl = getTargetUrl();
+
+      document.getElementById('qrcode').innerHTML = '';
+      new QRCode(document.getElementById('qrcode'), { 
+        text: targetUrl, 
+        width: 280, 
+        height: 280,
+        correctLevel: QRCode.CorrectLevel.L
+      });
+
+      document.getElementById('setupScreen').classList.add('hidden');
+      document.getElementById('qrScreen').classList.remove('hidden');
+    });
+
+    function openTestLink() {
+      const targetUrl = getTargetUrl();
+      window.open(targetUrl, '_blank');
+    }
+
+    document.getElementById('backBtn').addEventListener('click', () => {
+      document.getElementById('qrScreen').classList.add('hidden');
+      document.getElementById('setupScreen').classList.remove('hidden');
+    });
+  </script>
+</body>
+</html>
